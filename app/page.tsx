@@ -1,8 +1,6 @@
 import type { Metadata } from "next";
+import { BookingPlanner } from "./components/booking-planner";
 
-const bookingUrl = "https://espaciotopa.simplybook.me/v2/#book";
-const workshopUrl =
-  "https://espaciotopa.simplybook.me/v2/#book/service/5";
 const whatsappUrl =
   "https://wa.me/59899383698?text=Hola%20Espacio%20TOPA%2C%20quisiera%20consultar%20por%20cumplea%C3%B1os%20o%20eventos.";
 const instagramUrl = "https://www.instagram.com/espaciotopauy/";
@@ -26,7 +24,7 @@ const faqs = [
   {
     question: "¿Cómo reservo para la cafetería?",
     answer:
-      "Las reservas de cafetería se toman únicamente por SimplyBook. Elegí el turno disponible y seguí los pasos hasta completar la reserva.",
+      "Elegí un turno publicado, completá tus datos y enviá la solicitud. La reserva queda pendiente hasta que TOPA confirme la disponibilidad.",
   },
   {
     question: "¿Los bebés pagan entrada?",
@@ -51,7 +49,7 @@ export default function Home() {
     name: "Espacio TOPA",
     description:
       "Cafetería familiar, ciudad de niños, talleres, cumpleaños y eventos en Salto, Uruguay.",
-    url: "https://espaciotopa.simplybook.me/v2/",
+    url: "https://espacio-topa-salto.gatin518.chatgpt.site",
     telephone: "+59899383698",
     email: "espaciotopa@gmail.com",
     image: "/assets/brand/topa-logo.png",
@@ -96,9 +94,7 @@ export default function Home() {
 
           <a
             className="button button-small button-primary header-cta"
-            href={bookingUrl}
-            target="_blank"
-            rel="noreferrer"
+            href="#reservar"
           >
             Reservar
           </a>
@@ -119,9 +115,7 @@ export default function Home() {
               <div className="hero-actions" aria-label="Acciones principales">
                 <a
                   className="button button-primary"
-                  href={bookingUrl}
-                  target="_blank"
-                  rel="noreferrer"
+                  href="#reservar"
                 >
                   Reservar cafetería
                   <span aria-hidden="true">→</span>
@@ -217,7 +211,7 @@ export default function Home() {
                   <li>Hasta 10 años: $390 con merienda</li>
                   <li>Desde 11 años y adultos: a la carta</li>
                 </ul>
-                <a href={bookingUrl} target="_blank" rel="noreferrer">
+                <a href="#reservar">
                   Ver turnos disponibles <span aria-hidden="true">→</span>
                 </a>
               </article>
@@ -235,7 +229,7 @@ export default function Home() {
                   <li>Actividad, merienda y juego incluidos</li>
                   <li>Valor actual: $700 por niño</li>
                 </ul>
-                <a href={workshopUrl} target="_blank" rel="noreferrer">
+                <a href="#reservar">
                   Reservar un taller <span aria-hidden="true">→</span>
                 </a>
               </article>
@@ -268,15 +262,12 @@ export default function Home() {
               <p className="eyebrow">Reservar es simple</p>
               <h2>Elegí un turno y preparate para disfrutar.</h2>
               <p>
-                Los días disponibles se habilitan semana a semana. También
-                compartimos las novedades en las historias destacadas de
-                Instagram.
+                Los turnos disponibles se actualizan desde TOPA. Elegí la
+                experiencia, el día y horario que mejor les quede.
               </p>
               <a
                 className="button button-light"
-                href={bookingUrl}
-                target="_blank"
-                rel="noreferrer"
+                href="#reservar"
               >
                 Ir a reservas
                 <span aria-hidden="true">→</span>
@@ -306,6 +297,22 @@ export default function Home() {
                 </div>
               </li>
             </ol>
+          </div>
+        </section>
+
+        <section className="section booking-experience" id="reservar">
+          <div className="container">
+            <div className="section-heading compact">
+              <div>
+                <p className="eyebrow">Reservas TOPA</p>
+                <h2>Elegí el turno que quieren disfrutar.</h2>
+              </div>
+              <p>
+                Completá una solicitud online. Te confirmaremos por el medio
+                de contacto que nos dejes.
+              </p>
+            </div>
+            <BookingPlanner />
           </div>
         </section>
 
@@ -446,9 +453,7 @@ export default function Home() {
             </div>
             <a
               className="button button-primary"
-              href={bookingUrl}
-              target="_blank"
-              rel="noreferrer"
+              href="#reservar"
             >
               Reservar ahora
               <span aria-hidden="true">→</span>
@@ -495,7 +500,7 @@ export default function Home() {
       </footer>
 
       <div className="mobile-booking-bar">
-        <a href={bookingUrl} target="_blank" rel="noreferrer">
+        <a href="#reservar">
           Reservar cafetería
           <span aria-hidden="true">→</span>
         </a>

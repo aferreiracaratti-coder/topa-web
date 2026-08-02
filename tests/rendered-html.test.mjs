@@ -35,10 +35,11 @@ test("server-renders the Espacio TOPA landing page", async () => {
   assert.match(html, /Brasil 774/);
   assert.match(html, /Jueves/);
   assert.match(html, /17:00 a 19:00/);
-  assert.match(html, /https:\/\/espaciotopa\.simplybook\.me\/v2\/#book/);
+  assert.match(html, /href="#reservar"/);
   assert.match(html, /https:\/\/wa\.me\/59899383698/);
   assert.match(html, /application\/ld\+json/);
   assert.doesNotMatch(html, /codex-preview|Your site is taking shape/i);
+  assert.doesNotMatch(html, /simplybook/i);
 });
 
 test("keeps the finished site metadata and brand asset in place", async () => {
@@ -50,11 +51,13 @@ test("keeps the finished site metadata and brand asset in place", async () => {
 
   assert.match(page, /Espacio TOPA/);
   assert.match(page, /LocalBusiness/);
+  assert.match(page, /BookingPlanner/);
   assert.match(layout, /lang="es"/);
   assert.match(layout, /favicon\.png/);
   assert.match(packageJson, /"name": "espacio-topa-web"/);
   assert.doesNotMatch(packageJson, /react-loading-skeleton/);
   assert.doesNotMatch(page, /SkeletonPreview|codex-preview/);
+  assert.doesNotMatch(page, /simplybook/i);
 
   await access(
     new URL("../public/assets/brand/topa-logo.png", import.meta.url),
