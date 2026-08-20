@@ -75,8 +75,12 @@ function validate(form: BookingForm, availabilitySlotId: string) {
   return errors;
 }
 
-export function BookingPlanner() {
-  const [activity, setActivity] = useState<ActivityType>("CAFETERIA");
+export function BookingPlanner({
+  initialActivity = "CAFETERIA",
+}: {
+  initialActivity?: ActivityType;
+}) {
+  const [activity, setActivity] = useState<ActivityType>(initialActivity);
   const [slots, setSlots] = useState<AvailabilitySlot[]>([]);
   const [selectedSlotId, setSelectedSlotId] = useState("");
   const [isLoading, setIsLoading] = useState(true);

@@ -10,8 +10,11 @@ test("creates a Vercel Build Output API bundle", async () => {
 });
 
 test("keeps the finished site metadata and brand asset in place", async () => {
-  const [page, layout, packageJson, vercelConfig] = await Promise.all([
+  const [page, cafeteria, talleres, eventos, layout, packageJson, vercelConfig] = await Promise.all([
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/cafeteria/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/talleres/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/eventos/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/layout.tsx", import.meta.url), "utf8"),
     readFile(new URL("../package.json", import.meta.url), "utf8"),
     readFile(new URL("../vercel.json", import.meta.url), "utf8"),
@@ -19,7 +22,10 @@ test("keeps the finished site metadata and brand asset in place", async () => {
 
   assert.match(page, /Espacio TOPA/);
   assert.match(page, /LocalBusiness/);
-  assert.match(page, /BookingPlanner/);
+  assert.match(page, /Bienvenidos al mundo TOPA/);
+  assert.match(cafeteria, /BookingPlanner/);
+  assert.match(talleres, /initialActivity="WORKSHOP"/);
+  assert.match(eventos, /initialActivity="EVENT"/);
   assert.match(layout, /lang="es"/);
   assert.match(layout, /favicon\.png/);
   assert.match(packageJson, /"name": "espacio-topa-web"/);
@@ -35,4 +41,5 @@ test("keeps the finished site metadata and brand asset in place", async () => {
     new URL("../public/assets/brand/topa-logo.png", import.meta.url),
   );
   await access(new URL("../public/favicon.png", import.meta.url));
+  await access(new URL("../public/og.png", import.meta.url));
 });
