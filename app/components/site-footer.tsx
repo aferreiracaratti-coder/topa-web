@@ -1,4 +1,7 @@
 const whatsappUrl = "https://wa.me/59899383698?text=Hola%20TOPA%2C%20quiero%20hacer%20una%20consulta.";
+const mapsQuery = "Brasil%20774%2C%20Salto%2C%20Uruguay";
+const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${mapsQuery}`;
+const mapsEmbedUrl = `https://www.google.com/maps?q=${mapsQuery}&output=embed`;
 
 export function SiteFooter() {
   return (
@@ -29,6 +32,23 @@ export function SiteFooter() {
           <a href="/nosotros">Quiénes somos</a>
           <a href="/cafeteria#reservar">Reservar</a>
         </div>
+      </div>
+      <div className="container footer-map-section">
+        <div className="footer-map-copy">
+          <p className="footer-map-kicker">Cómo llegar</p>
+          <h2>Visitá Espacio TOPA</h2>
+          <address>Brasil 774 · Salto, Uruguay</address>
+          <a className="footer-directions" href={mapsUrl} target="_blank" rel="noreferrer">
+            Abrir indicaciones en Google Maps →
+          </a>
+        </div>
+        <iframe
+          className="footer-map-frame"
+          title="Mapa de Espacio TOPA"
+          src={mapsEmbedUrl}
+          loading="lazy"
+          referrerPolicy="no-referrer-when-downgrade"
+        />
       </div>
       <div className="container footer-bottom">
         <span>© 2026 Espacio TOPA · Todos los derechos reservados.</span>

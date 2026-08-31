@@ -11,17 +11,18 @@ import {
   TopaApiError,
 } from "../../lib/topa-api";
 
-const activities: { value: ActivityType; label: string }[] = [
+type PublicBookingActivity = Exclude<ActivityType, "EVENT">;
+
+const activities: { value: PublicBookingActivity; label: string }[] = [
   { value: "CAFETERIA", label: "Cafetería y juego" },
   { value: "WORKSHOP", label: "Taller TOPA" },
-  { value: "EVENT", label: "Evento" },
 ];
 
 const initialForm = {
   customerName: "",
   phone: "",
   email: "",
-  adults: "0",
+  adults: "1",
   children: "0",
   infants: "0",
   dietaryRestrictions: "",
@@ -31,6 +32,17 @@ const initialForm = {
 
 type BookingForm = typeof initialForm;
 
+function formatTime(value: Date) {
+  const parts = new Intl.DateTimeFormat("es-UY", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(value);
+  const hour = parts.find((part) => part.type === "hour")?.value ?? "";
+  const minute = parts.find((part) => part.type === "minute")?.value ?? "00";
+  return minute === "00" ? hour : `${hour}:${minute}`;
+}
+
 function formatSlot(slot: AvailabilitySlot) {
   const start = new Date(slot.startsAt);
   const end = new Date(slot.endsAt);
@@ -39,32 +51,37 @@ function formatSlot(slot: AvailabilitySlot) {
     day: "numeric",
     month: "long",
   }).format(start);
-  const time = new Intl.DateTimeFormat("es-UY", {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-
-  return `${date} · ${time.format(start)} a ${time.format(end)}`;
+  return `${date} · ${formatTime(start)} a ${formatTime(end)} hs`;
 }
 
-function capacityLabel(slot: AvailabilitySlot) {
-  if (slot.status === "FULL") return "Sin cupo";
-  if (slot.availableCapacityUnits !== null) {
-    return `${slot.availableCapacityUnits} lugares disponibles`;
-  }
-  return "Cupo disponible";
+function nextWeekRange() {
+  const from = new Date();
+  from.setHours(0, 0, 0, 0);
+  const daysUntilMonday = from.getDay() === 0 ? 1 : 8 - from.getDay();
+  from.setDate(from.getDate() + daysUntilMonday);
+
+  const to = new Date(from);
+  to.setDate(to.getDate() + 7);
+  return { from, to };
 }
 
-function validate(form: BookingForm, availabilitySlotId: string) {
+function validate(
+  form: BookingForm,
+  availabilitySlotId: string,
+  isWorkshop: boolean,
+) {
   const errors: Record<string, string> = {};
-  const quantities = ["adults", "children", "infants"] as const;
-
   if (!form.customerName.trim()) errors.customerName = "Ingresá tu nombre.";
-  if (!form.phone.trim() && !form.email.trim()) {
-    errors.contact = "Ingresá un celular o un email.";
+  if (isWorkshop && !form.email.trim()) {
+    errors.email = "Ingresá el email del padre o madre.";
+  } else if (!isWorkshop) {
+    if (!form.phone.trim()) errors.phone = "Ingresá un celular.";
+    if (!form.email.trim()) errors.email = "Ingresá un email.";
+    if (Number(form.adults) < 1) errors.adults = "La reserva requiere al menos un adulto.";
   }
   if (!availabilitySlotId) errors.availabilitySlotId = "Elegí un turno disponible.";
 
+  const quantities = (isWorkshop ? [] : ["adults", "children", "infants"]) as const;
   for (const field of quantities) {
     const value = Number(form[field]);
     if (!Number.isInteger(value) || value < 0 || value > 52) {
@@ -78,9 +95,9 @@ function validate(form: BookingForm, availabilitySlotId: string) {
 export function BookingPlanner({
   initialActivity = "CAFETERIA",
 }: {
-  initialActivity?: ActivityType;
+  initialActivity?: PublicBookingActivity;
 }) {
-  const [activity, setActivity] = useState<ActivityType>(initialActivity);
+  const [activity, setActivity] = useState<PublicBookingActivity>(initialActivity);
   const [slots, setSlots] = useState<AvailabilitySlot[]>([]);
   const [selectedSlotId, setSelectedSlotId] = useState("");
   const [isLoading, setIsLoading] = useState(true);
@@ -90,11 +107,10 @@ export function BookingPlanner({
   const [submitError, setSubmitError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [result, setResult] = useState<BookingRequestResult | null>(null);
+  const isWorkshop = activity === "WORKSHOP";
 
   const loadSlots = useCallback(async (signal?: AbortSignal) => {
-    const from = new Date();
-    const to = new Date(from);
-    to.setDate(to.getDate() + 30);
+    const { from, to } = nextWeekRange();
 
     setIsLoading(true);
     setAvailabilityError("");
@@ -129,7 +145,7 @@ export function BookingPlanner({
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const errors = validate(form, selectedSlotId);
+    const errors = validate(form, selectedSlotId, isWorkshop);
     setFieldErrors(errors);
     setSubmitError("");
     setResult(null);
@@ -139,13 +155,13 @@ export function BookingPlanner({
     try {
       const response = await createBookingRequest({
         customerName: form.customerName.trim(),
-        phone: form.phone.trim() || undefined,
+        phone: isWorkshop ? undefined : form.phone.trim(),
         email: form.email.trim() || undefined,
         communicationConsent: form.communicationConsent,
         availabilitySlotId: Number(selectedSlotId),
-        adults: Number(form.adults),
-        children: Number(form.children),
-        infants: Number(form.infants),
+        adults: isWorkshop ? 0 : Number(form.adults),
+        children: isWorkshop ? 1 : Number(form.children),
+        infants: isWorkshop ? 0 : Number(form.infants),
         dietaryRestrictions: form.dietaryRestrictions.trim() || undefined,
         notes: form.notes.trim() || undefined,
       });
@@ -170,7 +186,15 @@ export function BookingPlanner({
             className={item.value === activity ? "booking-tab is-active" : "booking-tab"}
             key={item.value}
             type="button"
-            onClick={() => setActivity(item.value)}
+            onClick={() => {
+              setActivity(item.value);
+              if (item.value === "CAFETERIA") {
+                setForm((current) => ({
+                  ...current,
+                  adults: Number(current.adults) < 1 ? "1" : current.adults,
+                }));
+              }
+            }}
             aria-pressed={item.value === activity}
           >
             {item.label}
@@ -178,10 +202,10 @@ export function BookingPlanner({
         ))}
       </div>
 
-      <div className="booking-layout">
+      <div className={selectedSlotId ? "booking-layout" : "booking-layout is-awaiting-selection"}>
         <section className="availability-panel" aria-labelledby="turnos-title">
           <div className="booking-panel-heading">
-            <p className="eyebrow">Próximos 30 días</p>
+            <p className="eyebrow">Próxima semana</p>
             <h3 id="turnos-title">Elegí un turno</h3>
           </div>
           {isLoading ? <p className="booking-status">Buscando turnos disponibles…</p> : null}
@@ -215,7 +239,7 @@ export function BookingPlanner({
                   }}
                 >
                   <span>{formatSlot(slot)}</span>
-                  <small>{capacityLabel(slot)}</small>
+                  {isFull ? <small>Sin cupo</small> : null}
                   {slot.publicNotes ? <em>{slot.publicNotes}</em> : null}
                 </button>
               );
@@ -226,51 +250,54 @@ export function BookingPlanner({
           ) : null}
         </section>
 
-        <form className="booking-form" onSubmit={submit} noValidate>
+        {selectedSlotId ? <form className="booking-form" onSubmit={submit} noValidate>
           <div className="booking-panel-heading">
             <p className="eyebrow">Tus datos</p>
-            <h3>Contanos quiénes vienen</h3>
+            <h3>{isWorkshop ? "Datos para el taller" : "Contanos quiénes vienen"}</h3>
             <p>La solicitud queda pendiente hasta que TOPA confirme la disponibilidad.</p>
           </div>
 
           <label className="field">
-            <span>Nombre y apellido</span>
+            <span>{isWorkshop ? "Nombre y apellido del niño" : "Nombre y apellido"}</span>
             <input
               value={form.customerName}
               onChange={(event) => updateForm("customerName", event.target.value)}
               aria-invalid={Boolean(fieldErrors.customerName)}
               autoComplete="name"
+              required
             />
             {fieldErrors.customerName ? <small className="field-error">{fieldErrors.customerName}</small> : null}
           </label>
 
-          <div className="field-row">
-            <label className="field">
-              <span>Celular</span>
+          <div className={isWorkshop ? "field-row field-row-single" : "field-row"}>
+            {!isWorkshop ? <label className="field">
+              <span>Celular *</span>
               <input
                 value={form.phone}
                 onChange={(event) => updateForm("phone", event.target.value)}
                 inputMode="tel"
                 autoComplete="tel"
-                aria-invalid={Boolean(fieldErrors.contact || fieldErrors.phone)}
+                aria-invalid={Boolean(fieldErrors.phone)}
+                required
               />
-            </label>
+            </label> : null}
             <label className="field">
-              <span>Email</span>
+              <span>{isWorkshop ? "Email del padre o madre" : "Email"} *</span>
               <input
                 value={form.email}
                 onChange={(event) => updateForm("email", event.target.value)}
                 type="email"
                 autoComplete="email"
-                aria-invalid={Boolean(fieldErrors.contact || fieldErrors.email)}
+                aria-invalid={Boolean(fieldErrors.email)}
+                required
               />
             </label>
           </div>
-          {fieldErrors.contact || fieldErrors.phone || fieldErrors.email ? (
-            <p className="field-error">{fieldErrors.contact || fieldErrors.phone || fieldErrors.email}</p>
+          {fieldErrors.phone || fieldErrors.email ? (
+            <p className="field-error">{fieldErrors.phone || fieldErrors.email}</p>
           ) : null}
 
-          <div className="guest-counts" aria-label="Cantidad de asistentes">
+          {!isWorkshop ? <div className="guest-counts" aria-label="Cantidad de asistentes">
             {([
               ["adults", "Adultos"],
               ["children", "Niños"],
@@ -280,7 +307,7 @@ export function BookingPlanner({
                 <span>{label}</span>
                 <input
                   type="number"
-                  min="0"
+                  min={field === "adults" ? "1" : "0"}
                   max="52"
                   value={form[field]}
                   onChange={(event) => updateForm(field, event.target.value)}
@@ -289,7 +316,7 @@ export function BookingPlanner({
                 {fieldErrors[field] ? <small className="field-error">{fieldErrors[field]}</small> : null}
               </label>
             ))}
-          </div>
+          </div> : null}
 
           <label className="field">
             <span>Restricciones alimentarias <small>(opcional)</small></span>
@@ -329,7 +356,7 @@ export function BookingPlanner({
             {isSubmitting ? "Enviando solicitud…" : "Enviar solicitud"}
             <span aria-hidden="true">→</span>
           </button>
-        </form>
+        </form> : <aside className="booking-continue-card" aria-live="polite"><p className="eyebrow">Siguiente paso</p><h3>Primero elegí un turno.</h3><p>Cuando selecciones un horario disponible, se abrirá el formulario para completar tus datos.</p></aside>}
       </div>
     </div>
   );

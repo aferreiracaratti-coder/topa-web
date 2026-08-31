@@ -19,7 +19,7 @@ export function SiteHeader() {
             <a key={link.href} href={link.href}>{link.label}</a>
           ))}
         </nav>
-        <a className="button button-primary nav-booking" href="/cafeteria#reservar">
+        <a className="button button-primary nav-booking" href="/#reservar">
           Reservar
         </a>
       </div>
