@@ -1,12 +1,17 @@
 import { PageFrame } from "../components/page-frame";
+import { RentalGallery } from "../components/rental-gallery";
 
 const whatsappNumber = "59899383698";
 
 const rentals = [
   {
     name: "Castillo inflable blanco",
-    image: "/assets/topa/rental-castillo-catalog.png",
-    alt: "Castillo inflable blanco para alquiler",
+    images: [
+      { src: "/assets/topa/rentals/castillo-hero.jpeg", alt: "Niñas jugando en el castillo inflable blanco de TOPA" },
+      { src: "/assets/topa/rentals/castillo-01.jpeg", alt: "Castillo inflable blanco con niños durante una celebración" },
+      { src: "/assets/topa/rentals/castillo-02.jpeg", alt: "Castillo inflable blanco instalado en el exterior" },
+      { src: "/assets/topa/rentals/castillo-03.jpeg", alt: "Detalle del castillo inflable blanco decorado" },
+    ],
     description: "Un espacio para saltar, jugar y disfrutar durante toda la celebración.",
     details: [
       "Medidas: 3 × 5 metros",
@@ -18,8 +23,11 @@ const rentals = [
   },
   {
     name: "Plaza de madera",
-    image: "/assets/topa/rental-plaza-madera-catalog.png",
-    alt: "Plaza de madera con juegos infantiles para alquiler",
+    images: [
+      { src: "/assets/topa/rentals/plaza-madera-01.jpeg", alt: "Plaza de madera de TOPA con juegos de movimiento" },
+      { src: "/assets/topa/rentals/plaza-madera-02.jpeg", alt: "Juegos de madera, pelotero y elementos de exploración" },
+      { src: "/assets/topa/rentals/plaza-madera-03.jpeg", alt: "Plaza de madera de TOPA preparada para una celebración" },
+    ],
     description: "Una propuesta de juego libre que invita a moverse, explorar y descubrir.",
     details: [
       "Incluye juegos de equilibrio, escalada y movimiento",
@@ -30,8 +38,11 @@ const rentals = [
   },
   {
     name: "Plaza Apego",
-    image: "/assets/topa/rental-plaza-apego-catalog.png",
-    alt: "Plaza Apego con juegos de madera, carpa y pelotero",
+    images: [
+      { src: "/assets/topa/rentals/plaza-apego-01.jpeg", alt: "Mesas bajas y actividades de la Plaza Apego" },
+      { src: "/assets/topa/rentals/plaza-apego-02.jpeg", alt: "Propuesta de juego tranquila con mesas bajas y almohadones" },
+      { src: "/assets/topa/rentals/plaza-apego-03.jpeg", alt: "Mesa de actividades infantiles preparada por TOPA" },
+    ],
     description: "Una propuesta más pequeña y versátil, creada para sumar juego, movimiento y exploración a cada celebración.",
     details: [
       "Incluye una selección de cinco juegos de nuestra Plaza de madera",
@@ -62,7 +73,7 @@ export default function AlquileresPage() {
             <p className="lead">Conocé las propuestas de TOPA y consultá disponibilidad para tu fecha. Cada alquiler se coordina según el espacio, las edades y la celebración.</p>
           </div>
           <div className="rental-hero-image">
-            <img src="/assets/topa/rental-hero-mesas.jpeg" alt="Mesas bajas y almohadones disponibles para celebrar con TOPA" width="900" height="1600" />
+            <img src="/assets/topa/rentals/castillo-hero.jpeg" alt="Niñas disfrutando el castillo inflable blanco de TOPA" width="1206" height="800" />
           </div>
         </div>
       </section>
@@ -77,9 +88,7 @@ export default function AlquileresPage() {
           <div className="rental-catalog">
             {rentals.map((rental) => (
               <article className="rental-card" key={rental.name}>
-                <div className="rental-card-image">
-                  <img src={rental.image} alt={rental.alt} width="900" height="900" />
-                </div>
+                <RentalGallery name={rental.name} images={rental.images} />
                 <div className="rental-card-content">
                   <h3>{rental.name}</h3>
                   <p>{rental.description}</p>
