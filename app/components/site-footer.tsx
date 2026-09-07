@@ -15,7 +15,7 @@ export function SiteFooter() {
           <h2>Explorar</h2>
           <a href="/cafeteria">Cafetería</a>
           <a href="/eventos">Eventos</a>
-          <a href="/eventos#catering">Catering</a>
+          <a href="/eventos">Catering</a>
           <a href="/alquileres">Alquileres</a>
         </div>
         <div>

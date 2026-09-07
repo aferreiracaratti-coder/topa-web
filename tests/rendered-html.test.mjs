@@ -10,12 +10,13 @@ test("creates a Vercel Build Output API bundle", async () => {
 });
 
 test("keeps the finished site metadata and brand asset in place", async () => {
-  const [page, cafeteria, talleres, alquileres, eventos, bookingPlanner, footer, layout, packageJson, vercelConfig] = await Promise.all([
+  const [page, cafeteria, talleres, alquileres, eventos, eventModalities, bookingPlanner, footer, layout, packageJson, vercelConfig] = await Promise.all([
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/cafeteria/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/talleres/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/alquileres/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/eventos/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/components/event-modalities.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/components/booking-planner.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/components/site-footer.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/layout.tsx", import.meta.url), "utf8"),
@@ -25,7 +26,9 @@ test("keeps the finished site metadata and brand asset in place", async () => {
 
   assert.match(page, /Espacio TOPA/);
   assert.match(page, /LocalBusiness/);
-  assert.match(page, /Bienvenidos al mundo TOPA/);
+  assert.match(page, /Bienvenidos al mundo TOPA, la primera ciudad de los niños en Salto/);
+  assert.match(page, /fachada-reservas-topa\.jpeg/);
+  assert.match(page, /topa-hero\.mp4/);
   assert.match(cafeteria, /BookingPlanner/);
   assert.match(talleres, /initialActivity="WORKSHOP"/);
   assert.doesNotMatch(cafeteria, /page-hero/);
@@ -36,15 +39,21 @@ test("keeps the finished site metadata and brand asset in place", async () => {
   assert.match(alquileres, /Plaza de madera/);
   assert.match(alquileres, /Plaza Apego/);
   assert.match(alquileres, /Consultar disponibilidad/);
-  assert.match(eventos, /wa\.me\/59899383698/);
+  assert.match(eventos, /EventModalities/);
+  assert.match(eventModalities, /wa\.me/);
+  assert.match(eventModalities, /Cumples infantiles/);
+  assert.match(eventModalities, /Cumples de adultos/);
+  assert.match(eventModalities, /Eventos institucionales/);
+  assert.match(eventModalities, /Despedidas de grupo/);
+  assert.match(eventModalities, /role="tablist"/);
   assert.doesNotMatch(eventos, /BookingPlanner|Solicitud de evento/);
   assert.match(bookingPlanner, /Cafetería y juego/);
   assert.match(bookingPlanner, /Taller TOPA/);
   assert.doesNotMatch(bookingPlanner, /label: "Evento"/);
   assert.match(bookingPlanner, /is-awaiting-selection/);
   assert.match(bookingPlanner, /Email del padre o madre/);
-  assert.match(bookingPlanner, /Próxima semana/);
-  assert.match(bookingPlanner, /nextWeekRange/);
+  assert.match(bookingPlanner, /Próximos turnos/);
+  assert.match(bookingPlanner, /upcomingSlotsRange/);
   assert.match(bookingPlanner, /Nombre y apellido del niño/);
   assert.match(bookingPlanner, /La reserva requiere al menos un adulto/);
   assert.match(bookingPlanner, /Celular \*/);
@@ -72,4 +81,7 @@ test("keeps the finished site metadata and brand asset in place", async () => {
   await access(new URL("../public/assets/topa/rental-plaza-madera-catalog.png", import.meta.url));
   await access(new URL("../public/assets/topa/rental-plaza-apego-catalog.png", import.meta.url));
   await access(new URL("../public/assets/topa/rental-hero-mesas.jpeg", import.meta.url));
+  await access(new URL("../public/assets/topa/topa-hero.mp4", import.meta.url));
+  await access(new URL("../public/assets/topa/familia-topa.jpeg", import.meta.url));
+  await access(new URL("../public/assets/topa/fachada-reservas-topa.jpeg", import.meta.url));
 });

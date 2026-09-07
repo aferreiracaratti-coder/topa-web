@@ -54,14 +54,13 @@ function formatSlot(slot: AvailabilitySlot) {
   return `${date} · ${formatTime(start)} a ${formatTime(end)} hs`;
 }
 
-function nextWeekRange() {
+function upcomingSlotsRange() {
   const from = new Date();
   from.setHours(0, 0, 0, 0);
-  const daysUntilMonday = from.getDay() === 0 ? 1 : 8 - from.getDay();
-  from.setDate(from.getDate() + daysUntilMonday);
 
   const to = new Date(from);
-  to.setDate(to.getDate() + 7);
+  to.setDate(to.getDate() + 14);
+  to.setHours(23, 59, 59, 999);
   return { from, to };
 }
 
@@ -110,7 +109,7 @@ export function BookingPlanner({
   const isWorkshop = activity === "WORKSHOP";
 
   const loadSlots = useCallback(async (signal?: AbortSignal) => {
-    const { from, to } = nextWeekRange();
+    const { from, to } = upcomingSlotsRange();
 
     setIsLoading(true);
     setAvailabilityError("");
@@ -205,7 +204,7 @@ export function BookingPlanner({
       <div className={selectedSlotId ? "booking-layout" : "booking-layout is-awaiting-selection"}>
         <section className="availability-panel" aria-labelledby="turnos-title">
           <div className="booking-panel-heading">
-            <p className="eyebrow">Próxima semana</p>
+            <p className="eyebrow">Próximos turnos</p>
             <h3 id="turnos-title">Elegí un turno</h3>
           </div>
           {isLoading ? <p className="booking-status">Buscando turnos disponibles…</p> : null}

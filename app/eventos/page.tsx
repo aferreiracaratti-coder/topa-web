@@ -1,13 +1,22 @@
+import { EventModalities } from "../components/event-modalities";
 import { PageFrame } from "../components/page-frame";
 
-const eventWhatsappUrl = "https://wa.me/59899383698?text=Hola%20TOPA%2C%20quiero%20consultar%20por%20un%20evento%20privado.";
-
-export const metadata = { title: "Eventos y catering", description: "Cumpleaños, celebraciones y catering para adultos en Espacio TOPA." };
+export const metadata = {
+  title: "Eventos en TOPA",
+  description: "Cumples infantiles y de adultos, eventos institucionales y despedidas de grupo en Espacio TOPA.",
+};
 
 export default function EventosPage() {
-  return <PageFrame>
-    <section className="page-hero coral-band"><div className="container narrow"><p className="section-kicker">Cumpleaños y eventos</p><h1>Celebrar en TOPA se siente diferente.</h1><p className="lead">Nos importa que los niños vivan un día increíble, pero también que la familia anfitriona pueda disfrutarlo. Por eso cuidamos la organización, la limpieza, la atención y cada detalle del servicio.</p><a className="button button-dark" href={eventWhatsappUrl} target="_blank" rel="noreferrer">Consultar por WhatsApp</a></div></section>
-    <section className="section"><div className="container feature-grid"><article><h2>✓ Qué incluye la propuesta</h2><ul><li>Uso exclusivo del espacio durante el turno contratado.</li><li>Acceso a todos los sectores de juego.</li><li>Mesas y sillas para niños y adultos.</li><li>Vajilla y elementos necesarios.</li><li>Espacio preparado para la torta.</li><li>Personal de apoyo durante el evento.</li><li>Ambientes climatizados.</li><li>Organización y limpieza del espacio.</li></ul></article><article><h2>＋ Adicionales disponibles</h2><ul><li>Media hora adicional.</li><li>Castillo inflable.</li><li>Catering para adultos.</li><li>Servicio de pizzas.</li><li>Chivitos calientes.</li><li>Súper Picada TOPA.</li><li>Merienda para adultos.</li><li>Propuestas especiales disponibles.</li></ul></article><article><h2>i Cómo reservar un evento</h2><p>Escribinos por WhatsApp con la fecha, la edad del homenajeado y una cantidad aproximada de niños y adultos. Te enviamos la propuesta y la fecha queda confirmada mediante el pago de la señal.</p><a className="button button-dark" href={eventWhatsappUrl} target="_blank" rel="noreferrer">Solicitar cotización por WhatsApp</a></article></div></section>
-    <section className="section catering-section" id="catering"><div className="container split-intro"><div><p className="section-kicker">Catering para adultos</p><h2>Opciones que están a la altura del evento.</h2></div><p className="lead">Además de pensar en los niños, preparamos propuestas ricas, abundantes y bien presentadas para que los adultos también disfruten.</p></div><div className="container three-columns"><article><h3>Merienda TOPA</h3><p>Una opción rica y completa para compartir durante la tarde.</p></article><article><h3>Pizzas y chivitos calientes</h3><p>Propuestas para sumar al evento y disfrutar entre todos.</p></article><article><h3>Picada TOPA</h3><p>Fiambres, quesos, aceitunas, tomates cherry, frutos secos, grisines, vegetales, panes, dips y snacks para compartir.</p></article></div></section>
-  </PageFrame>;
+  return (
+    <PageFrame>
+      <section className="page-hero coral-band event-page-hero">
+        <div className="container narrow">
+          <p className="section-kicker">Cumpleaños y eventos</p>
+          <h1>Un espacio, cuatro maneras de celebrar.</h1>
+          <p className="lead">Elegí la propuesta que mejor acompaña a tu grupo. Vas a encontrar solamente la información que necesitás para organizarla.</p>
+        </div>
+      </section>
+      <EventModalities />
+    </PageFrame>
+  );
 }
