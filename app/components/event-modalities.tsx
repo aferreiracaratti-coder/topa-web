@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useGSAP } from "@gsap/react";
 import gsap from "gsap";
 import { FoodGallery } from "./food-gallery";
@@ -15,6 +15,7 @@ type EventMode = {
   description: string;
   image: string;
   imageAlt: string;
+  imagePosition?: string;
   intro: string[];
   includes: string[];
   sections: Array<{ title: string; paragraphs?: string[]; items?: string[] }>;
@@ -31,8 +32,9 @@ const modes: EventMode[] = [
     title: "Cumples infantiles",
     shortTitle: "Cumples infantiles",
     description: "Ellos juegan, ustedes disfrutan y TOPA se ocupa del resto.",
-    image: "/assets/topa/nina-juego-principal.jpeg",
-    imageAlt: "Niña jugando en Espacio TOPA",
+    image: "/assets/topa/event-covers/cumple-infantil-topa.jpeg",
+    imageAlt: "Vaso de TOPA preparado para un cumple infantil",
+    imagePosition: "center 58%",
     intro: [
       "En TOPA los niños son los protagonistas, pero el festejo está pensado para que todos puedan disfrutar.",
       "Durante el cumpleaños, TOPA es exclusivo para tu evento. Los niños disfrutan de nuestros diferentes espacios de juego mientras los adultos comparten el festejo con comodidad.",
@@ -66,8 +68,9 @@ const modes: EventMode[] = [
     title: "Cumples de adultos",
     shortTitle: "Cumples adultos",
     description: "Un festejo para los grandes, donde los chicos también tienen su lugar.",
-    image: "/assets/topa/familia-topa.jpeg",
-    imageAlt: "Familia celebrando un momento especial",
+    image: "/assets/topa/event-covers/cumple-adultos-topa.jpeg",
+    imageAlt: "Celebración de adultos en la barbacoa de TOPA",
+    imagePosition: "center 54%",
     intro: ["Celebrá tu cumpleaños en la barbacoa de TOPA, mientras los niños disfrutan de nuestros espacios de juego.", "Una propuesta pensada para reunirse, comer y festejar con tranquilidad, con el espacio preparado y personal TOPA durante todo el evento."],
     includes: ["Uso exclusivo de la barbacoa durante 3 horas.", "Capacidad de hasta 40 adultos.", "Hasta 15 niños adicionales.", "Acceso a los espacios de juego de TOPA para los niños.", "Parrilla, 5 mesas redondas para 8 adultos cada una y 40 sillas para adultos.", "Mantelería blanca, servilletas de papel, vasos y vajilla de postre para los adultos.", "Heladera para las bebidas y baños interiores equipados.", "Ambientes climatizados.", "Dos personas de TOPA durante todo el evento: una en el acceso y juegos; otra para atención y servicio en la mesa.", "Lavado de vajilla, orden y limpieza final."],
     sections: [
@@ -87,8 +90,9 @@ const modes: EventMode[] = [
     title: "Eventos institucionales",
     shortTitle: "Instituciones",
     description: "Una jornada diferente para CAIF, jardines, colegios y centros educativos.",
-    image: "/assets/topa/experience-gallery/experience-12-trees.jpeg",
-    imageAlt: "Espacio de juego de TOPA preparado para recibir grupos",
+    image: "/assets/topa/event-covers/evento-institucional-topa.jpeg",
+    imageAlt: "Espacio de juego y panadería de TOPA para instituciones",
+    imagePosition: "center 51%",
     intro: ["TOPA también abre sus puertas a CAIF, jardines, colegios, centros educativos e instituciones que buscan realizar una jornada recreativa fuera de su espacio habitual.", "Una propuesta pensada para que los niños disfruten de nuestras instalaciones junto a sus educadores y acompañantes, con TOPA en exclusividad para el grupo."],
     includes: ["Uso exclusivo de TOPA durante 2 horas.", "Acceso a todos los espacios de juego.", "Personal TOPA durante toda la actividad.", "Mesas y sillas para niños y adultos.", "Baños interiores totalmente equipados, incluyendo baño con inodoro infantil.", "Ambientes climatizados con aire acondicionado y ventiladores.", "Organización y preparación del espacio, más limpieza final."],
     sections: [
@@ -110,7 +114,7 @@ const modes: EventMode[] = [
     intro: ["Una propuesta pensada para jardines, colegios, clases y grupos de familias que quieren compartir una despedida diferente.", "Las Despedidas de Grupo son una propuesta completa de TOPA: espacio, juegos, comida, bebida y atención durante todo el evento."],
     includes: ["Uso exclusivo de TOPA durante 2 horas y media.", "Acceso a todos los espacios de juego.", "Castillo inflable incluido, sujeto a condiciones climáticas.", "Mesas y sillas para niños y adultos.", "Personal TOPA durante todo el evento y ambientes climatizados.", "Comida y bebida para todos los niños.", "Picada de fiambres y quesos, pizza libre y bebidas línea Coca-Cola para los adultos.", "Torta dulce personalizada con el nombre del grupo, clase, jardín o colegio.", "Vajilla necesaria para el servicio y el momento de la torta.", "Organización, lavado y limpieza final."],
     sections: [
-      { title: "Una propuesta completa", paragraphs: ["La propuesta se cotiza de acuerdo con la cantidad de niños de la clase, adultos acompañantes y hermanitos que participarán.", "Cada niño de la clase puede participar junto a hasta 2 adultos acompañantes y hermanitos. Contemplando la participación de hermanitos, podemos recibir hasta aproximadamente 40 niños en total, coordinando previamente la cantidad total de asistentes."] },
+      { title: "Una propuesta completa", paragraphs: ["La propuesta se cotiza de acuerdo con la cantidad de niños de la clase, adultos acompañantes y hermanitos que participarán.", "Cada niño de la clase puede participar acompañado por hasta 2 adultos y sus hermanitos. Contemplando también la participación de los hermanos, podemos recibir hasta aproximadamente 40 niños en total, coordinando previamente la cantidad total de asistentes."] },
       { title: "¿Prefieren realizar el encuentro sin la comida de TOPA?", paragraphs: ["En ese caso, la despedida se cotiza como un evento privado tradicional, de acuerdo con la cantidad de niños y adultos que asistirán y las condiciones habituales de nuestros eventos."] },
       { title: "Disponibilidad", paragraphs: ["Las Despedidas de Grupo TOPA están disponibles únicamente los lunes, martes y miércoles, en horario a coordinar según disponibilidad."] },
     ],
@@ -129,6 +133,8 @@ export function EventModalities() {
   const [activeId, setActiveId] = useState<EventMode["id"]>("infantiles");
   const [showCatering, setShowCatering] = useState(false);
   const root = useRef<HTMLDivElement>(null);
+  const detailRef = useRef<HTMLElement>(null);
+  const shouldScrollToDetail = useRef(false);
   const activeMode = modes.find((mode) => mode.id === activeId) ?? modes[0];
 
   useGSAP(() => {
@@ -138,7 +144,17 @@ export function EventModalities() {
     gsap.fromTo(detail.querySelectorAll("[data-event-reveal]"), { autoAlpha: 0, y: 18 }, { autoAlpha: 1, y: 0, duration: 0.42, stagger: 0.055, delay: 0.08, ease: "power2.out", overwrite: "auto" });
   }, { scope: root, dependencies: [activeId] });
 
+  useEffect(() => {
+    if (!shouldScrollToDetail.current) return;
+    shouldScrollToDetail.current = false;
+    detailRef.current?.scrollIntoView({
+      behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
+      block: "start",
+    });
+  }, [activeId]);
+
   function selectMode(id: EventMode["id"]) {
+    shouldScrollToDetail.current = true;
     setActiveId(id);
     setShowCatering(false);
   }
@@ -156,7 +172,7 @@ export function EventModalities() {
             {modes.map((mode) => {
               const isActive = mode.id === activeId;
               return <button className={`event-mode-card ${isActive ? "is-active" : ""}`} type="button" key={mode.id} role="tab" aria-selected={isActive} aria-controls="event-mode-detail" onClick={() => selectMode(mode.id)}>
-                <img src={mode.image} alt="" width="960" height="720" />
+                <img src={mode.image} alt="" width="960" height="720" style={{ objectPosition: mode.imagePosition }} />
                 <span className="event-mode-card-overlay" />
                 <span className="event-mode-card-content"><strong>{mode.shortTitle}</strong><small>{mode.description}</small><span>{isActive ? "Propuesta seleccionada" : "Ver propuesta"}</span></span>
               </button>;
@@ -165,7 +181,7 @@ export function EventModalities() {
         </div>
       </section>
 
-      <section className="section event-detail-section" id="event-mode-detail" role="tabpanel" aria-label={activeMode.title} data-event-detail>
+      <section className="section event-detail-section" id="event-mode-detail" role="tabpanel" aria-label={activeMode.title} data-event-detail ref={detailRef}>
         <div className="container">
           <header className="event-detail-hero" data-event-reveal>
             <div className="event-detail-copy"><p className="section-kicker">{activeMode.title} en TOPA</p><h2>{activeMode.description}</h2>{activeMode.intro.map((paragraph) => <p key={paragraph}>{paragraph}</p>)}</div>

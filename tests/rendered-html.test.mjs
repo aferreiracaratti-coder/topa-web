@@ -46,6 +46,11 @@ test("keeps the finished site metadata and brand asset in place", async () => {
   assert.match(eventModalities, /Eventos institucionales/);
   assert.match(eventModalities, /Despedidas de grupo/);
   assert.match(eventModalities, /role="tablist"/);
+  assert.match(eventModalities, /scrollIntoView/);
+  assert.match(eventModalities, /cumple-infantil-topa\.jpeg/);
+  assert.match(eventModalities, /cumple-adultos-topa\.jpeg/);
+  assert.match(eventModalities, /evento-institucional-topa\.jpeg/);
+  assert.match(eventModalities, /Cada niño de la clase puede participar acompañado por hasta 2 adultos y sus hermanitos/);
   assert.doesNotMatch(eventos, /BookingPlanner|Solicitud de evento/);
   assert.match(bookingPlanner, /Cafetería y juego/);
   assert.match(bookingPlanner, /Taller TOPA/);
@@ -84,4 +89,7 @@ test("keeps the finished site metadata and brand asset in place", async () => {
   await access(new URL("../public/assets/topa/topa-hero.mp4", import.meta.url));
   await access(new URL("../public/assets/topa/familia-topa.jpeg", import.meta.url));
   await access(new URL("../public/assets/topa/fachada-reservas-topa.jpeg", import.meta.url));
+  await access(new URL("../public/assets/topa/event-covers/cumple-infantil-topa.jpeg", import.meta.url));
+  await access(new URL("../public/assets/topa/event-covers/cumple-adultos-topa.jpeg", import.meta.url));
+  await access(new URL("../public/assets/topa/event-covers/evento-institucional-topa.jpeg", import.meta.url));
 });
