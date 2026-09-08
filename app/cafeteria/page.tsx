@@ -48,6 +48,18 @@ export default function CafeteriaPage() {
           <FoodGallery name="la propuesta gastronómica de TOPA" categories={foodGalleryCategories} />
         </div>
       </section>
+
+      <section className="cafeteria-notice-section" aria-label="Información de funcionamiento de la cafetería">
+        <div className="container">
+          <img
+            className="cafeteria-notice-image"
+            src="/assets/topa/cafeteria-funcionamiento.jpeg"
+            alt="Funcionamiento de cafetería: no se permite el ingreso de mate"
+            width="1362"
+            height="2048"
+          />
+        </div>
+      </section>
     </PageFrame>
   );
 }

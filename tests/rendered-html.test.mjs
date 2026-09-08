@@ -30,6 +30,7 @@ test("keeps the finished site metadata and brand asset in place", async () => {
   assert.match(page, /fachada-reservas-topa\.jpeg/);
   assert.match(page, /topa-hero\.mp4/);
   assert.match(cafeteria, /BookingPlanner/);
+  assert.match(cafeteria, /cafeteria-funcionamiento\.jpeg/);
   assert.match(talleres, /initialActivity="WORKSHOP"/);
   assert.doesNotMatch(cafeteria, /page-hero/);
   assert.doesNotMatch(talleres, /page-hero/);
@@ -89,6 +90,7 @@ test("keeps the finished site metadata and brand asset in place", async () => {
   await access(new URL("../public/assets/topa/topa-hero.mp4", import.meta.url));
   await access(new URL("../public/assets/topa/familia-topa.jpeg", import.meta.url));
   await access(new URL("../public/assets/topa/fachada-reservas-topa.jpeg", import.meta.url));
+  await access(new URL("../public/assets/topa/cafeteria-funcionamiento.jpeg", import.meta.url));
   await access(new URL("../public/assets/topa/event-covers/cumple-infantil-topa.jpeg", import.meta.url));
   await access(new URL("../public/assets/topa/event-covers/cumple-adultos-topa.jpeg", import.meta.url));
   await access(new URL("../public/assets/topa/event-covers/evento-institucional-topa.jpeg", import.meta.url));
