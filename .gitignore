@@ -30,6 +30,12 @@ yarn-error.log*
 .pnpm-debug.log*
 .codex-*.log
 
+# Local Codex visual QA evidence and imported review assets
+.codex-*.png
+.codex-*/
+audit-*.png
+/window.innerWidth})
+
 # env files (can opt-in for committing if needed)
 .env*
 !.env.example
