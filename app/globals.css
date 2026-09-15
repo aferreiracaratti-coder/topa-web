@@ -1414,6 +1414,13 @@ h3 {
   margin-top: 24px;
 }
 
+.selection-summary {
+  margin: 14px 0 0;
+  color: var(--topa-muted);
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
 .slot-button {
   display: grid;
   width: 100%;

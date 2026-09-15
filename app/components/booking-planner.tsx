@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useCallback, useEffect, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 
 import {
   type ActivityType,
@@ -55,7 +55,7 @@ function capacityLabel(slot: AvailabilitySlot) {
   return "Cupo disponible";
 }
 
-function validate(form: BookingForm, availabilitySlotId: string) {
+function validate(form: BookingForm, selectedSlotIds: string[], activity: ActivityType) {
   const errors: Record<string, string> = {};
   const quantities = ["adults", "children", "infants"] as const;
 
@@ -63,7 +63,12 @@ function validate(form: BookingForm, availabilitySlotId: string) {
   if (!form.phone.trim() && !form.email.trim()) {
     errors.contact = "Ingresá un celular o un email.";
   }
-  if (!availabilitySlotId) errors.availabilitySlotId = "Elegí un turno disponible.";
+  if (selectedSlotIds.length === 0) {
+    errors.availabilitySlotId =
+      activity === "WORKSHOP"
+        ? "Elegí al menos un taller disponible."
+        : "Elegí un turno disponible.";
+  }
 
   for (const field of quantities) {
     const value = Number(form[field]);
@@ -78,45 +83,43 @@ function validate(form: BookingForm, availabilitySlotId: string) {
 export function BookingPlanner() {
   const [activity, setActivity] = useState<ActivityType>("CAFETERIA");
   const [slots, setSlots] = useState<AvailabilitySlot[]>([]);
-  const [selectedSlotId, setSelectedSlotId] = useState("");
+  const [selectedSlotIds, setSelectedSlotIds] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [availabilityError, setAvailabilityError] = useState("");
+  const [availabilityRefresh, setAvailabilityRefresh] = useState(0);
   const [form, setForm] = useState<BookingForm>(initialForm);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [submitError, setSubmitError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [result, setResult] = useState<BookingRequestResult | null>(null);
-
-  const loadSlots = useCallback(async (signal?: AbortSignal) => {
-    const from = new Date();
-    const to = new Date(from);
-    to.setDate(to.getDate() + 30);
-
-    setIsLoading(true);
-    setAvailabilityError("");
-    try {
-      const availability = await getAvailability(activity, from, to, signal);
-      setSlots(availability);
-    } catch (error) {
-      if (error instanceof DOMException && error.name === "AbortError") return;
-      setSlots([]);
-      setAvailabilityError(
-        error instanceof Error
-          ? error.message
-          : "No pudimos consultar la disponibilidad.",
-      );
-    } finally {
-      if (!signal?.aborted) setIsLoading(false);
-    }
-  }, [activity]);
+  const [results, setResults] = useState<BookingRequestResult[]>([]);
 
   useEffect(() => {
     const controller = new AbortController();
-    setSelectedSlotId("");
-    setResult(null);
-    void loadSlots(controller.signal);
+
+    async function loadSlots() {
+      const from = new Date();
+      const to = new Date(from);
+      to.setDate(to.getDate() + 30);
+
+      try {
+        const availability = await getAvailability(activity, from, to, controller.signal);
+        setSlots(availability);
+      } catch (error) {
+        if (error instanceof DOMException && error.name === "AbortError") return;
+        setSlots([]);
+        setAvailabilityError(
+          error instanceof Error
+            ? error.message
+            : "No pudimos consultar la disponibilidad.",
+        );
+      } finally {
+        if (!controller.signal.aborted) setIsLoading(false);
+      }
+    }
+
+    void loadSlots();
     return () => controller.abort();
-  }, [loadSlots]);
+  }, [activity, availabilityRefresh]);
 
   function updateForm(field: keyof BookingForm, value: string | boolean) {
     setForm((current) => ({ ...current, [field]: value }));
@@ -125,37 +128,82 @@ export function BookingPlanner() {
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const errors = validate(form, selectedSlotId);
+    const errors = validate(form, selectedSlotIds, activity);
     setFieldErrors(errors);
     setSubmitError("");
-    setResult(null);
+    setResults([]);
     if (Object.keys(errors).length > 0) return;
 
     setIsSubmitting(true);
-    try {
-      const response = await createBookingRequest({
-        customerName: form.customerName.trim(),
-        phone: form.phone.trim() || undefined,
-        email: form.email.trim() || undefined,
-        communicationConsent: form.communicationConsent,
-        availabilitySlotId: Number(selectedSlotId),
-        adults: Number(form.adults),
-        children: Number(form.children),
-        infants: Number(form.infants),
-        dietaryRestrictions: form.dietaryRestrictions.trim() || undefined,
-        notes: form.notes.trim() || undefined,
-      });
-      setResult(response);
-    } catch (error) {
-      if (error instanceof TopaApiError) {
-        setFieldErrors(error.fields);
-        setSubmitError(error.message);
-      } else {
-        setSubmitError("No pudimos enviar tu solicitud. Intentá nuevamente.");
-      }
-    } finally {
-      setIsSubmitting(false);
+    const responses = await Promise.allSettled(
+      selectedSlotIds.map((availabilitySlotId) =>
+        createBookingRequest({
+          customerName: form.customerName.trim(),
+          phone: form.phone.trim() || undefined,
+          email: form.email.trim() || undefined,
+          communicationConsent: form.communicationConsent,
+          availabilitySlotId: Number(availabilitySlotId),
+          adults: Number(form.adults),
+          children: Number(form.children),
+          infants: Number(form.infants),
+          dietaryRestrictions: form.dietaryRestrictions.trim() || undefined,
+          notes: form.notes.trim() || undefined,
+        }),
+      ),
+    );
+    const successfulResponses = responses.flatMap((response) =>
+      response.status === "fulfilled" ? [response.value] : [],
+    );
+    const failedSlotIds = responses.flatMap((response, index) =>
+      response.status === "rejected" ? [selectedSlotIds[index]] : [],
+    );
+
+    if (successfulResponses.length > 0) setResults(successfulResponses);
+
+    if (failedSlotIds.length > 0) {
+      const firstFailure = responses.find(
+        (response): response is PromiseRejectedResult => response.status === "rejected",
+      );
+      const error = firstFailure?.reason;
+      if (error instanceof TopaApiError) setFieldErrors(error.fields);
+      setSelectedSlotIds(failedSlotIds);
+      setSubmitError(
+        successfulResponses.length > 0
+          ? `Enviamos ${successfulResponses.length} ${successfulResponses.length === 1 ? "solicitud" : "solicitudes"}. Revisá los talleres que quedaron seleccionados e intentá nuevamente.`
+          : error instanceof TopaApiError
+            ? error.message
+            : "No pudimos enviar tu solicitud. Intentá nuevamente.",
+      );
+    } else {
+      setSelectedSlotIds([]);
     }
+
+    setIsSubmitting(false);
+  }
+
+  function toggleSlot(slotId: string) {
+    setSelectedSlotIds((current) => {
+      if (activity !== "WORKSHOP") return [slotId];
+      return current.includes(slotId)
+        ? current.filter((selectedSlotId) => selectedSlotId !== slotId)
+        : [...current, slotId];
+    });
+    setFieldErrors((current) => ({ ...current, availabilitySlotId: "" }));
+  }
+
+  function selectActivity(nextActivity: ActivityType) {
+    if (nextActivity === activity) return;
+    setActivity(nextActivity);
+    setSelectedSlotIds([]);
+    setResults([]);
+    setIsLoading(true);
+    setAvailabilityError("");
+  }
+
+  function retryLoadSlots() {
+    setIsLoading(true);
+    setAvailabilityError("");
+    setAvailabilityRefresh((current) => current + 1);
   }
 
   return (
@@ -166,7 +214,7 @@ export function BookingPlanner() {
             className={item.value === activity ? "booking-tab is-active" : "booking-tab"}
             key={item.value}
             type="button"
-            onClick={() => setActivity(item.value)}
+            onClick={() => selectActivity(item.value)}
             aria-pressed={item.value === activity}
           >
             {item.label}
@@ -178,13 +226,18 @@ export function BookingPlanner() {
         <section className="availability-panel" aria-labelledby="turnos-title">
           <div className="booking-panel-heading">
             <p className="eyebrow">Próximos 30 días</p>
-            <h3 id="turnos-title">Elegí un turno</h3>
+            <h3 id="turnos-title">
+              {activity === "WORKSHOP" ? "Elegí uno o varios talleres" : "Elegí un turno"}
+            </h3>
+            {activity === "WORKSHOP" ? (
+              <p>Podés seleccionar varios talleres y completar tus datos una sola vez.</p>
+            ) : null}
           </div>
           {isLoading ? <p className="booking-status">Buscando turnos disponibles…</p> : null}
           {availabilityError ? (
             <div className="form-banner is-error" role="alert">
               <p>{availabilityError}</p>
-              <button type="button" onClick={() => void loadSlots()}>
+              <button type="button" onClick={retryLoadSlots}>
                 Volver a intentar
               </button>
             </div>
@@ -197,7 +250,7 @@ export function BookingPlanner() {
           <div className="slot-list" aria-live="polite">
             {slots.map((slot) => {
               const isFull = slot.status === "FULL";
-              const selected = selectedSlotId === String(slot.id);
+              const selected = selectedSlotIds.includes(String(slot.id));
               return (
                 <button
                   className={selected ? "slot-button is-selected" : "slot-button"}
@@ -205,10 +258,7 @@ export function BookingPlanner() {
                   type="button"
                   disabled={isFull}
                   aria-pressed={selected}
-                  onClick={() => {
-                    setSelectedSlotId(String(slot.id));
-                    setFieldErrors((current) => ({ ...current, availabilitySlotId: "" }));
-                  }}
+                  onClick={() => toggleSlot(String(slot.id))}
                 >
                   <span>{formatSlot(slot)}</span>
                   <small>{capacityLabel(slot)}</small>
@@ -217,6 +267,13 @@ export function BookingPlanner() {
               );
             })}
           </div>
+          {activity === "WORKSHOP" ? (
+            <p className="selection-summary" aria-live="polite">
+              {selectedSlotIds.length === 0
+                ? "Todavía no seleccionaste talleres."
+                : `${selectedSlotIds.length} ${selectedSlotIds.length === 1 ? "taller seleccionado" : "talleres seleccionados"}.`}
+            </p>
+          ) : null}
           {fieldErrors.availabilitySlotId ? (
             <p className="field-error">{fieldErrors.availabilitySlotId}</p>
           ) : null}
@@ -313,10 +370,14 @@ export function BookingPlanner() {
           </label>
 
           {submitError ? <div className="form-banner is-error" role="alert">{submitError}</div> : null}
-          {result ? (
+          {results.length > 0 ? (
             <div className="booking-success" role="status">
-              <strong>Solicitud recibida</strong>
-              <p>{result.message || "Recibimos tu solicitud."}</p>
+              <strong>{results.length === 1 ? "Solicitud recibida" : "Solicitudes recibidas"}</strong>
+              <p>
+                {results.length === 1
+                  ? results[0].message || "Recibimos tu solicitud."
+                  : `Recibimos tus ${results.length} solicitudes.`}
+              </p>
               <small>Es una solicitud pendiente: TOPA te confirmará la disponibilidad.</small>
             </div>
           ) : null}
