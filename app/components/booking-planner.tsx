@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useRef, useState } from "react";
 
 import {
   type ActivityType,
@@ -111,6 +111,7 @@ export function BookingPlanner({
   const [submitError, setSubmitError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [results, setResults] = useState<BookingRequestResult[]>([]);
+  const idempotencyKeysBySlot = useRef<Record<string, string>>({});
   const isWorkshop = activity === "WORKSHOP";
 
   useEffect(() => {
@@ -153,8 +154,15 @@ export function BookingPlanner({
     if (Object.keys(errors).length > 0) return;
 
     setIsSubmitting(true);
+    const requests = selectedSlotIds.map((availabilitySlotId) => {
+      const idempotencyKey =
+        idempotencyKeysBySlot.current[availabilitySlotId] ?? crypto.randomUUID();
+      idempotencyKeysBySlot.current[availabilitySlotId] = idempotencyKey;
+
+      return { availabilitySlotId, idempotencyKey };
+    });
     const responses = await Promise.allSettled(
-      selectedSlotIds.map((availabilitySlotId) =>
+      requests.map(({ availabilitySlotId, idempotencyKey }) =>
         createBookingRequest({
           customerName: form.customerName.trim(),
           phone: isWorkshop ? undefined : form.phone.trim() || undefined,
@@ -166,15 +174,21 @@ export function BookingPlanner({
           infants: isWorkshop ? 0 : Number(form.infants),
           dietaryRestrictions: form.dietaryRestrictions.trim() || undefined,
           notes: form.notes.trim() || undefined,
-        }),
+        }, idempotencyKey),
       ),
     );
     const successfulResponses = responses.flatMap((response) =>
       response.status === "fulfilled" ? [response.value] : [],
     );
     const failedSlotIds = responses.flatMap((response, index) =>
-      response.status === "rejected" ? [selectedSlotIds[index]] : [],
+      response.status === "rejected" ? [requests[index].availabilitySlotId] : [],
     );
+    const failedSlotIdsSet = new Set(failedSlotIds);
+    for (const { availabilitySlotId } of requests) {
+      if (!failedSlotIdsSet.has(availabilitySlotId)) {
+        delete idempotencyKeysBySlot.current[availabilitySlotId];
+      }
+    }
 
     if (successfulResponses.length > 0) setResults(successfulResponses);
 
@@ -201,10 +215,17 @@ export function BookingPlanner({
 
   function toggleSlot(slotId: string) {
     setSelectedSlotIds((current) => {
-      if (!isWorkshop) return [slotId];
-      return current.includes(slotId)
-        ? current.filter((selectedSlotId) => selectedSlotId !== slotId)
-        : [...current, slotId];
+      if (!isWorkshop) {
+        for (const selectedSlotId of current) {
+          if (selectedSlotId !== slotId) delete idempotencyKeysBySlot.current[selectedSlotId];
+        }
+        return [slotId];
+      }
+      if (current.includes(slotId)) {
+        delete idempotencyKeysBySlot.current[slotId];
+        return current.filter((selectedSlotId) => selectedSlotId !== slotId);
+      }
+      return [...current, slotId];
     });
     setFieldErrors((current) => ({ ...current, availabilitySlotId: "" }));
   }
@@ -213,6 +234,7 @@ export function BookingPlanner({
     if (nextActivity === activity) return;
     setActivity(nextActivity);
     setSelectedSlotIds([]);
+    idempotencyKeysBySlot.current = {};
     setResults([]);
     setIsLoading(true);
     setAvailabilityError("");

@@ -95,11 +95,15 @@ export async function getAvailability(
 
 export async function createBookingRequest(
   input: PublicBookingRequest,
+  idempotencyKey: string,
 ): Promise<BookingRequestResult> {
   const response = await fetch(`${TOPA_API_URL}/requests`, {
     method: "POST",
     credentials: "omit",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      "Idempotency-Key": idempotencyKey,
+    },
     body: JSON.stringify(input),
   });
   const body = await readJson(response);
