@@ -16,6 +16,7 @@
 # next.js
 /.next/
 /.vinext/
+/.output/
 /out/
 
 # misc
@@ -28,6 +29,11 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 .codex-*.log
+
+# Local Codex visual QA evidence and imported review assets
+.codex-*.png
+.codex-*/
+audit-*.png
 
 # env files (can opt-in for committing if needed)
 .env*

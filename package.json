@@ -14,7 +14,9 @@
     "db:generate": "drizzle-kit generate"
   },
   "dependencies": {
+    "@gsap/react": "^2.1.2",
     "drizzle-orm": "0.45.2",
+    "gsap": "^3.15.0",
     "next": "16.2.6",
     "react": "19.2.6",
     "react-dom": "19.2.6"
@@ -28,10 +30,9 @@
     "drizzle-kit": "0.31.10",
     "eslint": "9.39.4",
     "eslint-config-next": "16.2.6",
-    "nitro": "^3.0.260610-beta",
+    "nitro": "3.0.260610-beta",
     "react-server-dom-webpack": "19.2.6",
     "typescript": "5.9.3",
-    "nitro": "3.0.260610-beta",
     "vinext": "0.0.50",
     "vite": "8.0.13"
   },

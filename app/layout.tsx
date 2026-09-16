@@ -7,7 +7,7 @@ export const metadata: Metadata = {
     template: "%s | Espacio TOPA",
   },
   description:
-    "Cafetería familiar, juegos, talleres, cumpleaños y eventos en Salto, Uruguay.",
+    "Cafetería, talleres, cumpleaños, eventos y alquileres infantiles en Salto, Uruguay.",
   keywords: [
     "Espacio TOPA",
     "cafetería familiar Salto",
@@ -19,6 +19,17 @@ export const metadata: Metadata = {
     icon: "/favicon.png",
     shortcut: "/favicon.png",
     apple: "/favicon.png",
+  },
+  openGraph: {
+    title: "Espacio TOPA | Salto, Uruguay",
+    description: "Cafetería, talleres, cumpleaños, eventos y alquileres infantiles en Salto, Uruguay.",
+    images: ["/og.png"],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Espacio TOPA | Salto, Uruguay",
+    description: "Cafetería, talleres, cumpleaños, eventos y alquileres infantiles en Salto, Uruguay.",
+    images: ["/og.png"],
   },
 };
 
