@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useRef, useState } from "react";
+import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 
 import {
   type ActivityType,
@@ -31,6 +31,11 @@ const initialForm = {
 };
 
 type BookingForm = typeof initialForm;
+
+type CafeteriaAddOn = {
+  slot: AvailabilitySlot;
+  workshopSlotIds: string[];
+};
 
 function formatTime(value: Date) {
   const parts = new Intl.DateTimeFormat("es-UY", {
@@ -64,18 +69,72 @@ function upcomingSlotsRange() {
   return { from, to };
 }
 
+function isOnSameDay(left: Date, right: Date) {
+  return (
+    left.getFullYear() === right.getFullYear() &&
+    left.getMonth() === right.getMonth() &&
+    left.getDate() === right.getDate()
+  );
+}
+
+function getCafeteriaAddOns(
+  workshopSlots: AvailabilitySlot[],
+  cafeteriaSlots: AvailabilitySlot[],
+): CafeteriaAddOn[] {
+  const addOnsBySlotId = new Map<string, CafeteriaAddOn>();
+
+  for (const workshopSlot of workshopSlots) {
+    const workshopEnd = new Date(workshopSlot.endsAt);
+    const nextCafeteriaSlot = cafeteriaSlots
+      .filter((cafeteriaSlot) => {
+        const cafeteriaStart = new Date(cafeteriaSlot.startsAt);
+        return (
+          cafeteriaSlot.status !== "FULL" &&
+          isOnSameDay(workshopEnd, cafeteriaStart) &&
+          cafeteriaStart.getTime() >= workshopEnd.getTime()
+        );
+      })
+      .sort(
+        (left, right) =>
+          new Date(left.startsAt).getTime() - new Date(right.startsAt).getTime(),
+      )[0];
+
+    if (!nextCafeteriaSlot) continue;
+
+    const slotId = String(nextCafeteriaSlot.id);
+    const existingAddOn = addOnsBySlotId.get(slotId);
+    if (existingAddOn) {
+      existingAddOn.workshopSlotIds.push(String(workshopSlot.id));
+    } else {
+      addOnsBySlotId.set(slotId, {
+        slot: nextCafeteriaSlot,
+        workshopSlotIds: [String(workshopSlot.id)],
+      });
+    }
+  }
+
+  return [...addOnsBySlotId.values()].sort(
+    (left, right) =>
+      new Date(left.slot.startsAt).getTime() - new Date(right.slot.startsAt).getTime(),
+  );
+}
+
 function validate(
   form: BookingForm,
   selectedSlotIds: string[],
   isWorkshop: boolean,
+  selectedCafeteriaSlotIds: string[],
 ) {
   const errors: Record<string, string> = {};
+  const includesCafeteria = !isWorkshop || selectedCafeteriaSlotIds.length > 0;
   if (!form.customerName.trim()) errors.customerName = "Ingresá tu nombre.";
   if (isWorkshop && !form.email.trim()) {
     errors.email = "Ingresá el email del padre o madre.";
-  } else if (!isWorkshop) {
+  } else if (!isWorkshop && !form.email.trim()) {
+    errors.email = "Ingresá un email.";
+  }
+  if (includesCafeteria) {
     if (!form.phone.trim()) errors.phone = "Ingresá un celular.";
-    if (!form.email.trim()) errors.email = "Ingresá un email.";
     if (Number(form.adults) < 1) errors.adults = "La reserva requiere al menos un adulto.";
   }
   if (selectedSlotIds.length === 0) {
@@ -84,7 +143,13 @@ function validate(
       : "Elegí un turno disponible.";
   }
 
-  const quantities = (isWorkshop ? [] : ["adults", "children", "infants"]) as const;
+  const quantities = (
+    isWorkshop
+      ? includesCafeteria
+        ? ["adults", "children"]
+        : []
+      : ["adults", "children", "infants"]
+  ) as ("adults" | "children" | "infants")[];
   for (const field of quantities) {
     const value = Number(form[field]);
     if (!Number.isInteger(value) || value < 0 || value > 52) {
@@ -103,8 +168,11 @@ export function BookingPlanner({
   const [activity, setActivity] = useState<PublicBookingActivity>(initialActivity);
   const [slots, setSlots] = useState<AvailabilitySlot[]>([]);
   const [selectedSlotIds, setSelectedSlotIds] = useState<string[]>([]);
+  const [cafeteriaSlots, setCafeteriaSlots] = useState<AvailabilitySlot[]>([]);
+  const [selectedCafeteriaSlotIds, setSelectedCafeteriaSlotIds] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [availabilityError, setAvailabilityError] = useState("");
+  const [cafeteriaAvailabilityError, setCafeteriaAvailabilityError] = useState("");
   const [availabilityRefresh, setAvailabilityRefresh] = useState(0);
   const [form, setForm] = useState<BookingForm>(initialForm);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
@@ -113,6 +181,21 @@ export function BookingPlanner({
   const [results, setResults] = useState<BookingRequestResult[]>([]);
   const idempotencyKeysBySlot = useRef<Record<string, string>>({});
   const isWorkshop = activity === "WORKSHOP";
+  const selectedWorkshopSlots = useMemo(
+    () => slots.filter((slot) => selectedSlotIds.includes(String(slot.id))),
+    [slots, selectedSlotIds],
+  );
+  const cafeteriaAddOns = useMemo(
+    () => (isWorkshop ? getCafeteriaAddOns(selectedWorkshopSlots, cafeteriaSlots) : []),
+    [isWorkshop, selectedWorkshopSlots, cafeteriaSlots],
+  );
+  const cafeteriaAddOnIdSet = useMemo(
+    () => new Set(cafeteriaAddOns.map((addOn) => String(addOn.slot.id))),
+    [cafeteriaAddOns],
+  );
+  const selectedCafeteriaAddOnIds = selectedCafeteriaSlotIds.filter((slotId) =>
+    cafeteriaAddOnIdSet.has(slotId),
+  );
 
   useEffect(() => {
     const controller = new AbortController();
@@ -140,6 +223,33 @@ export function BookingPlanner({
     return () => controller.abort();
   }, [activity, availabilityRefresh]);
 
+  useEffect(() => {
+    if (!isWorkshop) return;
+
+    const controller = new AbortController();
+
+    async function loadCafeteriaSlots() {
+      const { from, to } = upcomingSlotsRange();
+
+      try {
+        const availability = await getAvailability("CAFETERIA", from, to, controller.signal);
+        setCafeteriaSlots(availability);
+        setCafeteriaAvailabilityError("");
+      } catch (error) {
+        if (error instanceof DOMException && error.name === "AbortError") return;
+        setCafeteriaSlots([]);
+        setCafeteriaAvailabilityError(
+          error instanceof Error
+            ? error.message
+            : "No pudimos consultar los turnos de cafetería.",
+        );
+      }
+    }
+
+    void loadCafeteriaSlots();
+    return () => controller.abort();
+  }, [isWorkshop, availabilityRefresh]);
+
   function updateForm(field: keyof BookingForm, value: string | boolean) {
     setForm((current) => ({ ...current, [field]: value }));
     setFieldErrors((current) => ({ ...current, [field]: "", contact: "" }));
@@ -147,7 +257,7 @@ export function BookingPlanner({
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const errors = validate(form, selectedSlotIds, isWorkshop);
+    const errors = validate(form, selectedSlotIds, isWorkshop, selectedCafeteriaAddOnIds);
     setFieldErrors(errors);
     setSubmitError("");
     setResults([]);
@@ -155,23 +265,35 @@ export function BookingPlanner({
 
     setIsSubmitting(true);
     const requests = selectedSlotIds.map((availabilitySlotId) => {
+      const activityType = activity;
+      const requestKey = `${activityType}:${availabilitySlotId}`;
       const idempotencyKey =
-        idempotencyKeysBySlot.current[availabilitySlotId] ?? crypto.randomUUID();
-      idempotencyKeysBySlot.current[availabilitySlotId] = idempotencyKey;
+        idempotencyKeysBySlot.current[requestKey] ?? crypto.randomUUID();
+      idempotencyKeysBySlot.current[requestKey] = idempotencyKey;
 
-      return { availabilitySlotId, idempotencyKey };
+      return { activityType, availabilitySlotId, idempotencyKey, requestKey };
     });
+    if (isWorkshop) {
+      for (const availabilitySlotId of selectedCafeteriaAddOnIds) {
+        const activityType = "CAFETERIA" as const;
+        const requestKey = `${activityType}:${availabilitySlotId}`;
+        const idempotencyKey =
+          idempotencyKeysBySlot.current[requestKey] ?? crypto.randomUUID();
+        idempotencyKeysBySlot.current[requestKey] = idempotencyKey;
+        requests.push({ activityType, availabilitySlotId, idempotencyKey, requestKey });
+      }
+    }
     const responses = await Promise.allSettled(
-      requests.map(({ availabilitySlotId, idempotencyKey }) =>
+      requests.map(({ activityType, availabilitySlotId, idempotencyKey }) =>
         createBookingRequest({
           customerName: form.customerName.trim(),
-          phone: isWorkshop ? undefined : form.phone.trim() || undefined,
+          phone: activityType === "WORKSHOP" ? undefined : form.phone.trim(),
           email: form.email.trim() || undefined,
           communicationConsent: form.communicationConsent,
           availabilitySlotId: Number(availabilitySlotId),
-          adults: isWorkshop ? 0 : Number(form.adults),
-          children: isWorkshop ? 1 : Number(form.children),
-          infants: isWorkshop ? 0 : Number(form.infants),
+          adults: activityType === "WORKSHOP" ? 0 : Number(form.adults),
+          children: activityType === "WORKSHOP" ? 1 : Number(form.children),
+          infants: activityType === "WORKSHOP" ? 0 : Number(form.infants),
           dietaryRestrictions: form.dietaryRestrictions.trim() || undefined,
           notes: form.notes.trim() || undefined,
         }, idempotencyKey),
@@ -180,64 +302,100 @@ export function BookingPlanner({
     const successfulResponses = responses.flatMap((response) =>
       response.status === "fulfilled" ? [response.value] : [],
     );
-    const failedSlotIds = responses.flatMap((response, index) =>
-      response.status === "rejected" ? [requests[index].availabilitySlotId] : [],
+    const failedRequests = responses.flatMap((response, index) =>
+      response.status === "rejected" ? [requests[index]] : [],
     );
-    const failedSlotIdsSet = new Set(failedSlotIds);
-    for (const { availabilitySlotId } of requests) {
-      if (!failedSlotIdsSet.has(availabilitySlotId)) {
-        delete idempotencyKeysBySlot.current[availabilitySlotId];
-      }
-    }
 
     if (successfulResponses.length > 0) setResults(successfulResponses);
 
-    if (failedSlotIds.length > 0) {
+    if (failedRequests.length > 0) {
       const firstFailure = responses.find(
         (response): response is PromiseRejectedResult => response.status === "rejected",
       );
       const error = firstFailure?.reason;
       if (error instanceof TopaApiError) setFieldErrors(error.fields);
-      setSelectedSlotIds(failedSlotIds);
       setSubmitError(
         successfulResponses.length > 0
-          ? `Enviamos ${successfulResponses.length} ${successfulResponses.length === 1 ? "solicitud" : "solicitudes"}. Revisá los talleres que quedaron seleccionados e intentá nuevamente.`
+          ? `Enviamos ${successfulResponses.length} ${successfulResponses.length === 1 ? "solicitud" : "solicitudes"}. Revisá las reservas seleccionadas e intentá nuevamente.`
           : error instanceof TopaApiError
             ? error.message
             : "No pudimos enviar tu solicitud. Intentá nuevamente.",
       );
     } else {
       setSelectedSlotIds([]);
+      setSelectedCafeteriaSlotIds([]);
+      for (const { requestKey } of requests) {
+        delete idempotencyKeysBySlot.current[requestKey];
+      }
     }
 
     setIsSubmitting(false);
   }
 
   function toggleSlot(slotId: string) {
-    setSelectedSlotIds((current) => {
-      if (!isWorkshop) {
-        for (const selectedSlotId of current) {
-          if (selectedSlotId !== slotId) delete idempotencyKeysBySlot.current[selectedSlotId];
+    if (!isWorkshop) {
+      for (const selectedSlotId of selectedSlotIds) {
+        if (selectedSlotId !== slotId) {
+          delete idempotencyKeysBySlot.current[`${activity}:${selectedSlotId}`];
         }
-        return [slotId];
       }
-      if (current.includes(slotId)) {
-        delete idempotencyKeysBySlot.current[slotId];
-        return current.filter((selectedSlotId) => selectedSlotId !== slotId);
-      }
-      return [...current, slotId];
-    });
+      setSelectedSlotIds([slotId]);
+      setFieldErrors((current) => ({ ...current, availabilitySlotId: "" }));
+      return;
+    }
+
+    const nextWorkshopSlotIds = selectedSlotIds.includes(slotId)
+      ? selectedSlotIds.filter((selectedSlotId) => selectedSlotId !== slotId)
+      : [...selectedSlotIds, slotId];
+    if (selectedSlotIds.includes(slotId)) {
+      delete idempotencyKeysBySlot.current[`WORKSHOP:${slotId}`];
+    }
+    const nextWorkshopSlots = slots.filter((slot) =>
+      nextWorkshopSlotIds.includes(String(slot.id)),
+    );
+    const nextCafeteriaSlotIds = new Set(
+      getCafeteriaAddOns(nextWorkshopSlots, cafeteriaSlots).map((addOn) => String(addOn.slot.id)),
+    );
+    setSelectedSlotIds(nextWorkshopSlotIds);
+    setSelectedCafeteriaSlotIds((current) =>
+      current.filter((selectedSlotId) => nextCafeteriaSlotIds.has(selectedSlotId)),
+    );
     setFieldErrors((current) => ({ ...current, availabilitySlotId: "" }));
+  }
+
+  function toggleCafeteriaAddOn(slotId: string) {
+    const isFirstSelection =
+      selectedCafeteriaAddOnIds.length === 0 && !selectedCafeteriaAddOnIds.includes(slotId);
+    if (isFirstSelection) {
+      setForm((currentForm) => ({
+        ...currentForm,
+        adults: Number(currentForm.adults) < 1 ? "1" : currentForm.adults,
+        children: currentForm.children === "0" ? "1" : currentForm.children,
+      }));
+    }
+    setSelectedCafeteriaSlotIds((current) => {
+      const activeSlotIds = current.filter((selectedSlotId) =>
+        cafeteriaAddOnIdSet.has(selectedSlotId),
+      );
+      if (activeSlotIds.includes(slotId)) {
+        delete idempotencyKeysBySlot.current[`CAFETERIA:${slotId}`];
+        return activeSlotIds.filter((selectedSlotId) => selectedSlotId !== slotId);
+      }
+      return [...activeSlotIds, slotId];
+    });
+    setFieldErrors((current) => ({ ...current, adults: "", children: "", phone: "" }));
   }
 
   function selectActivity(nextActivity: PublicBookingActivity) {
     if (nextActivity === activity) return;
     setActivity(nextActivity);
     setSelectedSlotIds([]);
+    setSelectedCafeteriaSlotIds([]);
     idempotencyKeysBySlot.current = {};
     setResults([]);
     setIsLoading(true);
     setAvailabilityError("");
+    setCafeteriaAvailabilityError("");
     if (nextActivity === "CAFETERIA") {
       setForm((current) => ({
         ...current,
@@ -368,8 +526,8 @@ export function BookingPlanner({
               />
             </label>
           </div>
-          {fieldErrors.phone || fieldErrors.email ? (
-            <p className="field-error">{fieldErrors.phone || fieldErrors.email}</p>
+          {fieldErrors.email || (!isWorkshop && fieldErrors.phone) ? (
+            <p className="field-error">{fieldErrors.email || fieldErrors.phone}</p>
           ) : null}
 
           {!isWorkshop ? <div className="guest-counts" aria-label="Cantidad de asistentes">
@@ -392,6 +550,84 @@ export function BookingPlanner({
               </label>
             ))}
           </div> : null}
+
+          {isWorkshop && cafeteriaAddOns.length > 0 ? (
+            <fieldset className="cafeteria-add-on">
+              <legend>¿Quieren seguir en la cafetería?</legend>
+              <p>
+                Podés sumar el turno que sigue ese mismo día y completar ambas reservas ahora.
+              </p>
+              <div className="cafeteria-add-on-slots">
+                {cafeteriaAddOns.map((addOn) => {
+                  const slotId = String(addOn.slot.id);
+                  const selected = selectedCafeteriaAddOnIds.includes(slotId);
+                  return (
+                    <label
+                      className={selected ? "cafeteria-add-on-option is-selected" : "cafeteria-add-on-option"}
+                      key={slotId}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={selected}
+                        onChange={() => toggleCafeteriaAddOn(slotId)}
+                      />
+                      <span>
+                        <strong>{formatSlot(addOn.slot)}</strong>
+                        <small>
+                          {addOn.workshopSlotIds.length === 1
+                            ? "Es el turno siguiente a tu taller."
+                            : "Es el turno siguiente a algunos de tus talleres."}
+                        </small>
+                      </span>
+                    </label>
+                  );
+                })}
+              </div>
+
+              {selectedCafeteriaAddOnIds.length > 0 ? (
+                <div className="cafeteria-add-on-details">
+                  <p>Indicá cuántas personas se quedan a jugar en cada turno de cafetería seleccionado.</p>
+                  <div className="guest-counts guest-counts-two" aria-label="Asistentes a la cafetería">
+                    {([
+                      ["adults", "Adultos"],
+                      ["children", "Niños"],
+                    ] as const).map(([field, label]) => (
+                      <label className="field" key={field}>
+                        <span>{label}</span>
+                        <input
+                          type="number"
+                          min={field === "adults" ? "1" : "0"}
+                          max="52"
+                          value={form[field]}
+                          onChange={(event) => updateForm(field, event.target.value)}
+                          aria-invalid={Boolean(fieldErrors[field])}
+                        />
+                        {fieldErrors[field] ? <small className="field-error">{fieldErrors[field]}</small> : null}
+                      </label>
+                    ))}
+                  </div>
+                  <label className="field">
+                    <span>Celular de contacto *</span>
+                    <input
+                      value={form.phone}
+                      onChange={(event) => updateForm("phone", event.target.value)}
+                      inputMode="tel"
+                      autoComplete="tel"
+                      aria-invalid={Boolean(fieldErrors.phone)}
+                      required
+                    />
+                    {fieldErrors.phone ? <small className="field-error">{fieldErrors.phone}</small> : null}
+                  </label>
+                </div>
+              ) : null}
+            </fieldset>
+          ) : null}
+
+          {isWorkshop && selectedSlotIds.length > 0 && cafeteriaAvailabilityError ? (
+            <p className="booking-add-on-status" role="status">
+              No pudimos verificar ahora los turnos de cafetería. Podés enviar igualmente la reserva del taller.
+            </p>
+          ) : null}
 
           <label className="field">
             <span>Restricciones alimentarias <small>(opcional)</small></span>

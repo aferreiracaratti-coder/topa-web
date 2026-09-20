@@ -147,6 +147,17 @@ p { color:var(--muted); }
 .field-row, .guest-counts { display:grid; grid-template-columns:repeat(2,1fr); gap:12px; }
 .field-row-single { grid-template-columns:1fr; }
 .guest-counts { grid-template-columns:repeat(3,1fr); }
+.guest-counts-two { grid-template-columns:repeat(2,1fr); }
+.cafeteria-add-on { display:grid; gap:12px; margin:0; padding:18px; border:1px solid rgba(223,127,82,.45); border-radius:14px; background:rgba(252,236,202,.42); }
+.cafeteria-add-on legend { padding:0 5px; font-size:1.06rem; font-weight:800; color:var(--ink); }
+.cafeteria-add-on > p, .cafeteria-add-on-details > p { margin:0; color:var(--muted); font-size:.92rem; }
+.cafeteria-add-on-slots, .cafeteria-add-on-details { display:grid; gap:10px; }
+.cafeteria-add-on-option { display:flex; gap:11px; align-items:flex-start; padding:12px; border:1px solid var(--line); border-radius:12px; background:#fff; cursor:pointer; }
+.cafeteria-add-on-option.is-selected { border-color:var(--orange-dark); background:rgba(255,255,255,.84); }
+.cafeteria-add-on-option input { width:18px; height:18px; margin-top:2px; accent-color:var(--orange-dark); }
+.cafeteria-add-on-option span, .cafeteria-add-on-option small { display:block; }
+.cafeteria-add-on-option small { margin-top:3px; color:var(--muted); font-size:.85rem; }
+.booking-add-on-status { margin:0; color:var(--muted); font-size:.9rem; }
 .consent-field { display:flex; gap:10px; align-items:flex-start; color:var(--muted); }
 .consent-field input { width:18px; height:18px; margin-top:4px; accent-color:var(--blue-strong); }
 .field-error { color:#ad3434; font-size:.88rem; margin:0; }
