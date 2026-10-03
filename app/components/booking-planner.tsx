@@ -447,9 +447,19 @@ export function BookingPlanner({
             </div>
           ) : null}
           {!isLoading && !availabilityError && slots.length === 0 ? (
-            <p className="booking-status">
-              Todavía no hay turnos publicados para esta experiencia. Probá más tarde o escribinos por WhatsApp.
-            </p>
+            isWorkshop ? (
+              <p className="booking-status">
+                Todavía no hay turnos publicados para esta experiencia. Probá más tarde o escribinos por WhatsApp.
+              </p>
+            ) : (
+              <div className="booking-status cafeteria-empty-message">
+                <p>Los turnos de cada semana se publican los lunes.</p>
+                <p>
+                  Si no ves horarios disponibles, significa que los cupos ya se completaron o que esta semana no habrá nuevos turnos de cafetería.
+                </p>
+                <p>Estate atenta el próximo lunes para reservar.</p>
+              </div>
+            )
           ) : null}
           <div className="slot-list" aria-live="polite">
             {slots.map((slot) => {
