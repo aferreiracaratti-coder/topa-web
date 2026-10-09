@@ -133,8 +133,8 @@ function validate(
   } else if (!isWorkshop && !form.email.trim()) {
     errors.email = "Ingresá un email.";
   }
+  if (!form.phone.trim()) errors.phone = "Ingresá un celular.";
   if (includesCafeteria) {
-    if (!form.phone.trim()) errors.phone = "Ingresá un celular.";
     if (Number(form.adults) < 1) errors.adults = "La reserva requiere al menos un adulto.";
   }
   if (selectedSlotIds.length === 0) {
@@ -287,7 +287,7 @@ export function BookingPlanner({
       requests.map(({ activityType, availabilitySlotId, idempotencyKey }) =>
         createBookingRequest({
           customerName: form.customerName.trim(),
-          phone: activityType === "WORKSHOP" ? undefined : form.phone.trim(),
+          phone: form.phone.trim(),
           email: form.email.trim() || undefined,
           communicationConsent: form.communicationConsent,
           availabilitySlotId: Number(availabilitySlotId),
@@ -512,31 +512,56 @@ export function BookingPlanner({
             {fieldErrors.customerName ? <small className="field-error">{fieldErrors.customerName}</small> : null}
           </label>
 
-          <div className={isWorkshop ? "field-row field-row-single" : "field-row"}>
-            {!isWorkshop ? <label className="field">
-              <span>Celular *</span>
-              <input
-                value={form.phone}
-                onChange={(event) => updateForm("phone", event.target.value)}
-                inputMode="tel"
-                autoComplete="tel"
-                aria-invalid={Boolean(fieldErrors.phone)}
-                required
-              />
-            </label> : null}
-            <label className="field">
-              <span>{isWorkshop ? "Email del padre o madre" : "Email"} *</span>
-              <input
-                value={form.email}
-                onChange={(event) => updateForm("email", event.target.value)}
-                type="email"
-                autoComplete="email"
-                aria-invalid={Boolean(fieldErrors.email)}
-                required
-              />
-            </label>
+          <div className="field-row">
+            {isWorkshop ? <>
+              <label className="field">
+                <span>Email del padre o madre *</span>
+                <input
+                  value={form.email}
+                  onChange={(event) => updateForm("email", event.target.value)}
+                  type="email"
+                  autoComplete="email"
+                  aria-invalid={Boolean(fieldErrors.email)}
+                  required
+                />
+              </label>
+              <label className="field">
+                <span>Celular del padre o madre *</span>
+                <input
+                  value={form.phone}
+                  onChange={(event) => updateForm("phone", event.target.value)}
+                  inputMode="tel"
+                  autoComplete="tel"
+                  aria-invalid={Boolean(fieldErrors.phone)}
+                  required
+                />
+              </label>
+            </> : <>
+              <label className="field">
+                <span>Celular *</span>
+                <input
+                  value={form.phone}
+                  onChange={(event) => updateForm("phone", event.target.value)}
+                  inputMode="tel"
+                  autoComplete="tel"
+                  aria-invalid={Boolean(fieldErrors.phone)}
+                  required
+                />
+              </label>
+              <label className="field">
+                <span>Email *</span>
+                <input
+                  value={form.email}
+                  onChange={(event) => updateForm("email", event.target.value)}
+                  type="email"
+                  autoComplete="email"
+                  aria-invalid={Boolean(fieldErrors.email)}
+                  required
+                />
+              </label>
+            </>}
           </div>
-          {fieldErrors.email || (!isWorkshop && fieldErrors.phone) ? (
+          {fieldErrors.email || fieldErrors.phone ? (
             <p className="field-error">{fieldErrors.email || fieldErrors.phone}</p>
           ) : null}
 
@@ -616,18 +641,6 @@ export function BookingPlanner({
                       </label>
                     ))}
                   </div>
-                  <label className="field">
-                    <span>Celular de contacto *</span>
-                    <input
-                      value={form.phone}
-                      onChange={(event) => updateForm("phone", event.target.value)}
-                      inputMode="tel"
-                      autoComplete="tel"
-                      aria-invalid={Boolean(fieldErrors.phone)}
-                      required
-                    />
-                    {fieldErrors.phone ? <small className="field-error">{fieldErrors.phone}</small> : null}
-                  </label>
                 </div>
               ) : null}
             </fieldset>
